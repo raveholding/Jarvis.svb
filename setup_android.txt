@@ -1,0 +1,3 @@
+  · AndroidManifest.xml
+  · android/app/build.gradle.kts
+✔ Android listo para Jarvis SVB

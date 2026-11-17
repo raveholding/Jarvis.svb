@@ -1,0 +1,19 @@
+
+::group::✅ Passing tests
+✅ PiiRedactor anonimiza datos sensibles argentinos
+✅ PiiRedactor no rompe montos de dinero
+✅ WavEncoder genera cabecera RIFF válida
+✅ JsonUtils extrae JSON envuelto en markdown
+✅ VAD distingue silencio de voz sintética
+✅ InterruptionPolicy baja confianza → no interrumpe
+✅ InterruptionPolicy en reunión la voz pasa a notificación
+✅ InterruptionPolicy horario silencioso solo deja pasar críticos
+✅ InterruptionPolicy no repite la misma alerta
+✅ VectorMath encode/decode conserva el vector (float32)
+✅ VectorMath coseno: iguales = 1, ortogonales = 0, tamaños distintos = 0
+✅ VectorMath topK ordena por similitud y descarta lo que no llega al umbral
+✅ firestoreSafe convierte listas anidadas en texto JSON
+✅ AppSettings: el respaldo en la nube está apagado por defecto y respeta el modo privado
+::endgroup::
+
+🎉 14 tests passed.
