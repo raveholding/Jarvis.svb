@@ -19,7 +19,7 @@ dependencies:
 
   # Voz y notificaciones
   flutter_tts: ^4.2.0
-  flutter_local_notifications: ^19.0.0
+  flutter_local_notifications: ^18.0.1
   flutter_foreground_task: ^9.2.0
 
   # Contexto (GPS, movimiento, agenda)

@@ -43,7 +43,7 @@ jobs:
       - name: Generar plataforma Android (si falta)
         run: |
           if [ ! -f android/app/src/main/AndroidManifest.xml ]; then
-            flutter create --platforms=android --org com.vincularbusiness --project-name jarvis_svb . 2>&1 | tee logs/create.txt
+            flutter create --no-pub --platforms=android --org com.vincularbusiness --project-name jarvis_svb . 2>&1 | tee logs/create.txt
             rm -f test/widget_test.dart
             echo "SCAFFOLDED=1" >> "$GITHUB_ENV"
           fi
