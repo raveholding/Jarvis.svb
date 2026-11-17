@@ -3,7 +3,7 @@ class AppConfig {
   AppConfig._();
 
   static const appName = 'Jarvis SVB';
-  static const appVersion = '0.1.0';
+  static const appVersion = '0.2.0';
 
   // ---------------- Audio ----------------
   static const sampleRate = 16000;

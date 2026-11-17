@@ -12,8 +12,7 @@ class AppSettings {
     this.geminiSmartModel = AppConfig.defaultGeminiSmart,
     this.groqFastModel = AppConfig.defaultGroqFast,
     this.groqSmartModel = AppConfig.defaultGroqSmart,
-    this.supabaseUrl = '',
-    this.supabaseAnonKey = '',
+    this.cloudBackupEnabled = false,
     this.webhookUrl = '',
     this.webhookSecret = '',
     this.whisperModel = 'base',
@@ -39,8 +38,8 @@ class AppSettings {
   final String groqFastModel;
   final String groqSmartModel;
 
-  final String supabaseUrl;
-  final String supabaseAnonKey;
+  /// Respaldo opcional en Firebase (Firestore). Apagado por defecto.
+  final bool cloudBackupEnabled;
 
   final String webhookUrl;
   final String webhookSecret;
@@ -65,7 +64,7 @@ class AppSettings {
   final bool consentAccepted;
 
   bool get hasLlm => geminiApiKey.trim().isNotEmpty || groqApiKey.trim().isNotEmpty;
-  bool get hasSupabase => supabaseUrl.trim().isNotEmpty && supabaseAnonKey.trim().isNotEmpty;
+  bool get hasCloudBackup => cloudEnabled && cloudBackupEnabled;
   bool get hasWebhook => webhookUrl.trim().startsWith('https://');
   String get displayName => userName.trim().isEmpty ? 'el usuario' : userName.trim();
 
@@ -87,8 +86,7 @@ class AppSettings {
     String? geminiSmartModel,
     String? groqFastModel,
     String? groqSmartModel,
-    String? supabaseUrl,
-    String? supabaseAnonKey,
+    bool? cloudBackupEnabled,
     String? webhookUrl,
     String? webhookSecret,
     String? whisperModel,
@@ -112,8 +110,7 @@ class AppSettings {
       geminiSmartModel: geminiSmartModel ?? this.geminiSmartModel,
       groqFastModel: groqFastModel ?? this.groqFastModel,
       groqSmartModel: groqSmartModel ?? this.groqSmartModel,
-      supabaseUrl: supabaseUrl ?? this.supabaseUrl,
-      supabaseAnonKey: supabaseAnonKey ?? this.supabaseAnonKey,
+      cloudBackupEnabled: cloudBackupEnabled ?? this.cloudBackupEnabled,
       webhookUrl: webhookUrl ?? this.webhookUrl,
       webhookSecret: webhookSecret ?? this.webhookSecret,
       whisperModel: whisperModel ?? this.whisperModel,
@@ -139,8 +136,7 @@ class AppSettings {
         'geminiSmartModel': geminiSmartModel,
         'groqFastModel': groqFastModel,
         'groqSmartModel': groqSmartModel,
-        'supabaseUrl': supabaseUrl,
-        'supabaseAnonKey': supabaseAnonKey,
+        'cloudBackupEnabled': cloudBackupEnabled,
         'webhookUrl': webhookUrl,
         'webhookSecret': webhookSecret,
         'whisperModel': whisperModel,
@@ -171,8 +167,7 @@ class AppSettings {
       geminiSmartModel: s('geminiSmartModel', d.geminiSmartModel),
       groqFastModel: s('groqFastModel', d.groqFastModel),
       groqSmartModel: s('groqSmartModel', d.groqSmartModel),
-      supabaseUrl: s('supabaseUrl', d.supabaseUrl),
-      supabaseAnonKey: s('supabaseAnonKey', d.supabaseAnonKey),
+      cloudBackupEnabled: b('cloudBackupEnabled', d.cloudBackupEnabled),
       webhookUrl: s('webhookUrl', d.webhookUrl),
       webhookSecret: s('webhookSecret', d.webhookSecret),
       whisperModel: s('whisperModel', d.whisperModel),

@@ -9,7 +9,7 @@
 ```
 🎙 mic → VAD (local) → Whisper (local) → anonimización → contexto (GPS, movimiento, agenda)
       → motor de decisión (pre-filtro local + Gemini Flash + política) → 🔊 voz | 🔔 push | 🗂 feed
-      → memoria cifrada local + Supabase/pgvector → eventos webhook para tu ERP/CRM
+      → memoria cifrada local con búsqueda vectorial + respaldo Firebase → eventos webhook para tu ERP/CRM
 ```
 
 - **El audio nunca sale del teléfono.** Se transcribe localmente y el buffer se destruye.
@@ -25,7 +25,8 @@
 | Detección de voz | VAD adaptativo estilo WebRTC (Dart, < 1 % CPU) |
 | Transcripción | whisper.cpp vía `whisper_ggml` (modelos tiny/base/small) |
 | Cerebro | Gemini 2.5 Flash-Lite / Flash (con cadena de respaldo) · Groq Llama 3 |
-| Memoria | SQLCipher local + Supabase PostgreSQL + pgvector (HNSW) |
+| Memoria | SQLCipher local + búsqueda vectorial en el teléfono (embeddings Gemini) |
+| Nube (opcional) | Firebase: Auth anónima + Cloud Firestore (proyecto `jarvis-svb`) |
 | Voz | `flutter_tts` nativo |
 | Segundo plano | Foreground Service tipo `microphone` |
 
@@ -38,7 +39,7 @@
 - [Arquitectura y diagrama completo](docs/ARQUITECTURA.md)
 - [Motor de decisión y System Prompt](docs/MOTOR_DE_DECISION.md)
 - [Integraciones y webhooks](docs/INTEGRACIONES.md)
-- [Esquema SQL de Supabase](supabase/migrations/0001_jarvis_init.sql)
+- [Reglas de seguridad de Firestore](firestore.rules)
 
 ## Estructura
 
@@ -50,7 +51,7 @@ lib/
 ├── domain/                        # entidades y contratos puros (sin Flutter ni proveedores)
 │   ├── entities/
 │   └── repositories/
-├── data/                          # implementaciones: SQLCipher, Secure Storage, Gemini, Groq, Supabase
+├── data/                          # implementaciones: SQLCipher, Secure Storage, Gemini, Groq, Firebase
 │   ├── local/
 │   ├── remote/
 │   └── repositories/
@@ -59,7 +60,7 @@ lib/
 ├── application/                   # orquestador del agente + casos de uso
 │   └── usecases/
 └── presentation/                  # pantallas y widgets (orbe, feed, privacidad, resumen, ajustes)
-supabase/migrations/               # SQL (pgvector, RLS, RPC de búsqueda semántica)
+firestore.rules · firebase.json    # reglas de Firestore (cada usuario solo ve lo suyo)
 tool/setup_android.dart            # permisos y configuración de Android (idempotente)
 .github/workflows/android.yml      # compila y publica el APK en cada push
 test/                              # tests de privacidad, VAD y política de interrupción

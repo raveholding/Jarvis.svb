@@ -8,7 +8,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/utils/logger.dart';
 import '../../data/local/local_database.dart';
-import '../../data/remote/supabase_sync.dart';
+import '../../data/remote/firebase_sync.dart';
 import '../../domain/entities/app_settings.dart';
 import '../../domain/entities/integration_event.dart';
 import '../../domain/repositories/integration_sink.dart';
@@ -25,14 +25,14 @@ class IntegrationsService {
   IntegrationsService({
     required LocalDatabase db,
     required AppSettings Function() settings,
-    required SupabaseSync supabase,
+    required FirebaseSync cloud,
     http.Client? client,
   })  : _db = db,
         _settings = settings {
     final c = client ?? http.Client();
     _sinks = [
       WebhookSink(settings: settings, client: c),
-      SupabaseQueueSink(settings: settings, supabase: supabase),
+      FirebaseQueueSink(settings: settings, cloud: cloud),
     ];
   }
 
@@ -140,21 +140,21 @@ class WebhookSink implements IntegrationSink {
   }
 }
 
-/// Espeja el evento en la tabla `webhook_queue` de Supabase para fan-out server-side.
-class SupabaseQueueSink implements IntegrationSink {
-  SupabaseQueueSink({required AppSettings Function() settings, required SupabaseSync supabase})
+/// Espeja el evento en `users/{uid}/events` de Firestore (panel web / Cloud Functions a futuro).
+class FirebaseQueueSink implements IntegrationSink {
+  FirebaseQueueSink({required AppSettings Function() settings, required FirebaseSync cloud})
       : _settings = settings,
-        _supabase = supabase;
+        _cloud = cloud;
 
   final AppSettings Function() _settings;
-  final SupabaseSync _supabase;
+  final FirebaseSync _cloud;
 
   @override
-  String get id => 'supabase_queue';
+  String get id => 'firebase_queue';
 
   @override
-  bool get enabled => _settings().hasSupabase;
+  bool get enabled => _settings().hasCloudBackup;
 
   @override
-  Future<void> deliver(IntegrationEvent event) => _supabase.enqueueRemoteEvent(event.toJson());
+  Future<void> deliver(IntegrationEvent event) => _cloud.enqueueRemoteEvent(event.toJson());
 }

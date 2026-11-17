@@ -61,5 +61,5 @@ Probado en `test/core_test.dart`.
 
 1. Ajustá **Proactividad** en Ajustes (mueve el umbral de confianza).
 2. Activá o desactivá **reglas** según tu negocio.
-3. Marcá 👍/👎 en las tarjetas; en Supabase la vista `decision_quality` te muestra el % de alertas útiles por categoría.
+3. Marcá 👍/👎 en las tarjetas; con el respaldo en Firebase activado, cada decisión sube con su `user_feedback` y `category` para medir el % de alertas útiles.
 4. Editá las secciones "CUÁNDO INTERRUMPIR" y los ejemplos del prompt para tu rubro.

@@ -2,11 +2,13 @@ name: Compilar APK Android
 
 on:
   push:
-    branches: [main]
+    # main publica el APK; las ramas claude/** solo verifican que compile.
+    branches: [main, 'claude/**']
     paths-ignore:
       - '**.md'
       - 'docs/**'
-      - 'supabase/**'
+      - 'firestore.rules'
+      - 'firebase.json'
   workflow_dispatch:
 
 permissions:
@@ -70,7 +72,7 @@ jobs:
         run: flutter build apk --release --target-platform android-arm64 2>&1 | tee logs/build.txt
 
       - name: Guardar plataforma Android en el repo
-        if: env.SCAFFOLDED == '1'
+        if: env.SCAFFOLDED == '1' && github.ref == 'refs/heads/main'
         run: |
           git config user.name "jarvis-ci"
           git config user.email "ci@vincularbusiness.local"
@@ -79,10 +81,11 @@ jobs:
           git push || true
 
       - name: Publicar APK en Releases
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.1.${{ github.run_number }}
-          name: Jarvis SVB v0.1.${{ github.run_number }}
+          tag_name: v0.2.${{ github.run_number }}
+          name: Jarvis SVB v0.2.${{ github.run_number }}
           body: |
             APK de prueba para Android 8+ (arm64).
             Instalación: descargá `app-release.apk` desde el celular y abrilo (permití "instalar apps desconocidas").
@@ -92,7 +95,7 @@ jobs:
       - name: Publicar logs de CI (rama ci-logs)
         if: always()
         run: |
-          echo "${{ job.status }} ${{ github.sha }}" > logs/status.txt
+          echo "${{ job.status }} ${{ github.sha }} ${{ github.ref_name }}" > logs/status.txt
           mkdir -p /tmp/ci && cp -r logs/. /tmp/ci/
           cd /tmp/ci
           git init -q && git checkout -q -b ci-logs

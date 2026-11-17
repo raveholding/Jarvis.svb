@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path/path.dart' as p;
@@ -33,8 +34,9 @@ class LocalDatabase {
     _db = await openDatabase(
       path,
       password: password,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
     await _seedRules();
   }
@@ -47,6 +49,13 @@ class LocalDatabase {
       await _secure.write(key: _keyName, value: key);
     }
     return key;
+  }
+
+  Future<void> _onUpgrade(Database db, int from, int to) async {
+    if (from < 2) {
+      // v2: el embedding se guarda en el teléfono (búsqueda semántica local).
+      await db.execute('ALTER TABLE memories ADD COLUMN embedding BLOB');
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -95,7 +104,8 @@ class LocalDatabase {
         content TEXT NOT NULL,
         importance REAL NOT NULL DEFAULT 0.5,
         created_at INTEGER NOT NULL,
-        synced INTEGER NOT NULL DEFAULT 0
+        synced INTEGER NOT NULL DEFAULT 0,
+        embedding BLOB
       )''');
     b.execute('''
       CREATE TABLE summaries(
@@ -254,7 +264,36 @@ class LocalDatabase {
         'created_at': DateTime.now().millisecondsSinceEpoch,
       });
 
-  /// Búsqueda léxica local (fallback sin conexión de la búsqueda vectorial).
+  /// Recuerdos que todavía no tienen embedding calculado.
+  Future<List<Map<String, Object?>>> memoriesWithoutEmbedding({int limit = 20}) => db.query(
+        'memories',
+        columns: ['id', 'content'],
+        where: 'embedding IS NULL',
+        orderBy: 'created_at ASC',
+        limit: limit,
+      );
+
+  Future<void> setMemoryEmbedding(String id, Uint8List embedding) =>
+      db.update('memories', {'embedding': embedding}, where: 'id = ?', whereArgs: [id]);
+
+  /// Firma barata del índice vectorial: cambia cuando se agrega o borra un embedding.
+  Future<String> embeddedMemoriesSignature() async {
+    final r = (await db.rawQuery(
+      'SELECT COUNT(*) AS n, COALESCE(MAX(created_at), 0) AS t FROM memories WHERE embedding IS NOT NULL',
+    ))
+        .first;
+    return '${r['n']}:${r['t']}';
+  }
+
+  Future<List<Map<String, Object?>>> embeddedMemories({int limit = 5000}) => db.query(
+        'memories',
+        columns: ['content', 'importance', 'embedding'],
+        where: 'embedding IS NOT NULL',
+        orderBy: 'created_at DESC',
+        limit: limit,
+      );
+
+  /// Búsqueda léxica local (respaldo de la búsqueda vectorial).
   Future<List<String>> searchMemoriesLocal(String query, {int k = 5}) async {
     final words = query
         .toLowerCase()
@@ -377,6 +416,13 @@ class LocalDatabase {
 
   Future<List<Map<String, Object?>>> unsynced(String table, {int limit = 50}) =>
       db.query(table, where: 'synced = 0', limit: limit);
+
+  /// Vuelve a marcar todo como pendiente (p. ej. tras borrar la copia en la nube).
+  Future<void> markAllUnsynced() async {
+    for (final t in ['context_events', 'decisions', 'tasks', 'memories', 'summaries']) {
+      await db.update(t, {'synced': 0});
+    }
+  }
 
   Future<void> markSynced(String table, String keyColumn, List<Object?> keys) async {
     if (keys.isEmpty) return;

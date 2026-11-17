@@ -47,7 +47,7 @@ const ok = crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(req.headers
 - Patrón **outbox**: el evento se guarda cifrado en el teléfono antes de enviarse.
 - Reintentos exponenciales: 30 s, 1, 2, 4, 8 y 16 min; después pasa a `dead`.
 - Entrega **al menos una vez**: deduplicá por `X-Jarvis-Delivery`.
-- Con Supabase configurado, los eventos también se copian a `webhook_queue` para entregarlos desde el servidor (ver la sección 11 del SQL).
+- Con el respaldo en Firebase activado, los eventos también se copian a `users/{uid}/events` en Firestore (base para un panel web o para entregarlos desde Cloud Functions).
 
 ## Destino personalizado en código
 

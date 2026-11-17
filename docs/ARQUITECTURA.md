@@ -43,12 +43,12 @@
 └─────────────────────────────────────────────────────┼─────────────────────────┼─────────────┘
                                                       │ HTTPS + JWT (anónimo)   │ HTTPS + HMAC
                                                       ▼                         ▼
-                              ┌────────── SUPABASE (capa gratuita) ──────────┐  ERP / CRM / n8n
-                              │ context_logs · decisions · tasks             │  (webhooks
-                              │ memories (pgvector HNSW) ◀── match_memories()│   onTaskDetected,
-                              │ daily_summaries · proactivity_rules          │   onSummaryGenerated…)
-                              │ webhook_queue ──(pg_net opcional)──▶ destinos│
-                              └──────────────────────────────────────────────┘
+                              ┌─── FIREBASE · Firestore (plan Spark, gratis) ─┐  ERP / CRM / n8n
+                              │ users/{uid}/context_logs · decisions · tasks  │  (webhooks
+                              │ users/{uid}/memories (con embedding)          │   onTaskDetected,
+                              │ users/{uid}/daily_summaries · events          │   onSummaryGenerated…)
+                              │ Respaldo opcional: la búsqueda es local       │
+                              └───────────────────────────────────────────────┘
 
   Orbe (UI) ──tap──▶ captura 1 frase ──▶ Whisper ──▶ AnswerQuery (contexto del día + memoria
                                                      vectorial + tareas) ──▶ LLM ──▶ TTS
@@ -60,18 +60,19 @@
 | Capa | Carpeta | Responsabilidad | Depende de |
 |---|---|---|---|
 | Dominio | `lib/domain` | Entidades puras y contratos (`LlmRepository`, `MemoryRepository`, `IntegrationSink`) | nada |
-| Datos | `lib/data` | SQLCipher, Secure Storage, Gemini, Groq, Supabase | dominio |
+| Datos | `lib/data` | SQLCipher, Secure Storage, Gemini, Groq, Firebase | dominio |
 | Servicios | `lib/services` | Audio/VAD, Whisper, sensores, motor de decisión, TTS, notificaciones, integraciones | dominio, datos |
 | Aplicación | `lib/application` | Orquestador y casos de uso (resumen, consulta) | todo lo anterior |
 | Presentación | `lib/presentation` | Pantallas y widgets (Riverpod) | aplicación |
 
-El dominio no conoce Flutter, Supabase ni Gemini. Cambiar de proveedor = nueva implementación del contrato.
+El dominio no conoce Flutter, Firebase ni Gemini. Cambiar de proveedor = nueva implementación del contrato.
 
 ## 3. Decisiones de diseño clave
 
 - **Silencio por defecto, en tres capas.** El pre-filtro local evita ~80 % de las llamadas al LLM (batería, cuota gratuita, latencia). El LLM propone; la política determinística decide. Así una alucinación del modelo nunca te habla en medio de una reunión.
 - **Privacidad por diseño.** El audio solo existe en RAM y en un WAV temporal que se sobrescribe con ceros. A la nube va texto anonimizado. "Modo privado" corta toda salida a internet.
-- **Offline-first.** Todo se guarda primero en SQLCipher. La sincronización con Supabase y los webhooks usan colas con reintentos exponenciales.
+- **Offline-first.** Todo se guarda primero en SQLCipher. El respaldo en Firebase y los webhooks usan colas locales con reintentos; Firestore corre sin caché en disco para no dejar texto sin cifrar.
+- **Memoria vectorial en el teléfono.** Cada recuerdo guarda su embedding (768 dims) en SQLCipher y la búsqueda es similitud coseno local: no depende de ningún servidor de base de datos.
 - **Event-driven.** Cada hecho relevante es un evento versionado (`jarvis.svb` · `v1.0`). Ver `INTEGRACIONES.md`.
 - **Fallback de modelos.** Si un modelo de Gemini se retira (404), el router prueba la siguiente opción de la cadena y, si falla la cuota, cae a Groq.
 
@@ -81,5 +82,5 @@ El dominio no conoce Flutter, Supabase ni Gemini. Cambiar de proveedor = nueva i
 2. **Reconocimiento del hablante** ("solo mi voz"): embeddings de voz locales para no procesar conversaciones de terceros.
 3. **Transcripción en streaming** con `transcribeLive` de whisper_ggml para bajar latencia de consultas.
 4. **Isolate dedicado** para el pipeline, para que siga vivo aunque se cierre la app desde recientes.
-5. **Panel web** (Supabase + Next.js) para editar reglas y ver métricas de `decision_quality`.
+5. **Panel web** (Firebase Hosting + Firestore) para editar reglas y ver el % de alertas útiles por categoría.
 6. **Aprendizaje por feedback**: usar 👍/👎 para ajustar umbrales por categoría.

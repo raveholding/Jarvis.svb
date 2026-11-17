@@ -36,8 +36,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       'groqApiKey': s.groqApiKey,
       'geminiFastModel': s.geminiFastModel,
       'geminiSmartModel': s.geminiSmartModel,
-      'supabaseUrl': s.supabaseUrl,
-      'supabaseAnonKey': s.supabaseAnonKey,
       'webhookUrl': s.webhookUrl,
       'webhookSecret': s.webhookSecret,
     }.entries) {
@@ -64,8 +62,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         groqApiKey: _c['groqApiKey']!.text.trim(),
         geminiFastModel: _orDefault(_c['geminiFastModel']!.text, AppConfig.defaultGeminiFast),
         geminiSmartModel: _orDefault(_c['geminiSmartModel']!.text, AppConfig.defaultGeminiSmart),
-        supabaseUrl: _c['supabaseUrl']!.text.trim(),
-        supabaseAnonKey: _c['supabaseAnonKey']!.text.trim(),
         webhookUrl: _c['webhookUrl']!.text.trim(),
         webhookSecret: _c['webhookSecret']!.text.trim(),
       );
@@ -73,15 +69,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   static String _orDefault(String v, String d) => v.trim().isEmpty ? d : v.trim();
 
   Future<void> _save() async {
-    final before = ref.read(settingsProvider);
     final next = _collect();
     await ref.read(settingsProvider.notifier).save(next);
     await ref.read(agentProvider.notifier).onSettingsChanged();
     if (!mounted) return;
-    final supabaseChanged = before.supabaseUrl != next.supabaseUrl && before.supabaseUrl.isNotEmpty;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(supabaseChanged ? 'Guardado. Reiniciá la app para aplicar la nueva URL de Supabase.' : 'Ajustes guardados.'),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ajustes guardados.')));
     Navigator.of(context).pop();
   }
 
@@ -110,7 +102,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (c) => AlertDialog(
         title: const Text('¿Borrar todos los datos locales?'),
         content: const Text('Se eliminan transcripciones, decisiones, tareas, memoria y resúmenes de este teléfono. '
-            'Los datos ya sincronizados en tu Supabase se borran desde su panel.'),
+            'La copia en la nube se borra aparte, con "Borrar mi copia en la nube".'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancelar')),
           FilledButton(
@@ -124,6 +116,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (ok != true) return;
     await ref.read(agentProvider.notifier).wipeAllData();
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Datos borrados.')));
+  }
+
+  Future<void> _wipeCloud() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('¿Borrar tu copia en la nube?'),
+        content: const Text('Se elimina de Firebase todo lo que subió este teléfono. '
+            'Los datos locales no se tocan y se vuelven a subir si dejás el respaldo activado.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancelar')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: JColors.red),
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Borrar copia'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await ref.read(settingsProvider.notifier).save(_collect());
+    final done = await ref.read(agentProvider.notifier).wipeCloudData();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(done
+          ? 'Copia en la nube borrada.'
+          : 'No se pudo borrar: activá el respaldo y revisá la conexión.'),
+    ));
   }
 
   @override
@@ -221,9 +241,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               },
             ),
 
-          const _Header('Memoria en la nube (opcional)', 'Supabase + pgvector. Ver docs/DESPLIEGUE.md.'),
-          _field('supabaseUrl', 'Supabase URL', hint: 'https://xxxx.supabase.co'),
-          _field('supabaseAnonKey', 'Supabase anon key', secret: true),
+          const _Header('Respaldo en la nube (opcional)', 'Firebase · Firestore. La memoria y su búsqueda funcionan igual sin esto.'),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Respaldar en Firebase'),
+            subtitle: const Text('Sube texto anonimizado, decisiones, tareas, memoria y resúmenes. Nunca audio.'),
+            value: _draft.cloudBackupEnabled,
+            onChanged: (v) => setState(() => _draft = _draft.copyWith(cloudBackupEnabled: v)),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(foregroundColor: JColors.red),
+              onPressed: _draft.cloudBackupEnabled ? _wipeCloud : null,
+              icon: const Icon(Icons.cloud_off_rounded),
+              label: const Text('Borrar mi copia en la nube'),
+            ),
+          ),
 
           const _Header('Integraciones (webhooks)', 'Jarvis envía eventos JSON firmados (HMAC-SHA256) a tu ERP/CRM.'),
           _field('webhookUrl', 'URL del webhook (https://)'),

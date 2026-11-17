@@ -556,7 +556,7 @@ class AgentOrchestrator extends Notifier<AgentState> {
       ));
       await ref.read(integrationsProvider).emit(JarvisEventType.summaryGenerated, {'date': summary.date, ...summary.content});
       ref.invalidate(latestSummaryProvider);
-      unawaited(ref.read(supabaseSyncProvider).pushPending());
+      unawaited(_syncCloud());
       state = state.copyWith(phase: prevPhase == AgentPhase.thinking ? _restingPhase : prevPhase, status: _restingStatus);
       if (speak && _settings.voiceEnabled) await ref.read(ttsProvider).speak(summary.spokenBrief);
       return summary;
@@ -594,6 +594,19 @@ class AgentOrchestrator extends Notifier<AgentState> {
     ref.read(listeningServiceProvider).vad.sensitivity = _settings.vadSensitivity;
   }
 
+  /// Calcula embeddings pendientes y después sube lo pendiente a Firebase (si está activo).
+  Future<void> _syncCloud() async {
+    await ref.read(memoryRepositoryProvider).indexPending();
+    await ref.read(cloudSyncProvider).pushPending();
+  }
+
+  /// Borra la copia en Firebase. Lo local queda marcado como pendiente de subir.
+  Future<bool> wipeCloudData() async {
+    final ok = await ref.read(cloudSyncProvider).wipeRemote();
+    if (ok) await _db.markAllUnsynced();
+    return ok;
+  }
+
   Future<void> wipeAllData() async {
     await _db.wipeAll();
     ref.read(decisionEngineProvider).clear();
@@ -604,7 +617,7 @@ class AgentOrchestrator extends Notifier<AgentState> {
   Future<void> _runMaintenance() async {
     try {
       unawaited(ref.read(integrationsProvider).dispatchPending());
-      unawaited(ref.read(supabaseSyncProvider).pushPending());
+      unawaited(_syncCloud());
 
       final now = DateTime.now();
       final s = _settings;

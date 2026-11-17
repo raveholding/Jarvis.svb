@@ -87,15 +87,22 @@ Para generar el APK: `flutter build apk --release --target-platform android-arm6
 
 ---
 
-## Supabase (opcional: memoria vectorial y respaldo en la nube)
+## Firebase (opcional: respaldo en la nube)
 
-1. https://supabase.com → **New project** (plan Free). Guardá la contraseña de la base.
-2. **SQL Editor → New query** → pegá todo `supabase/migrations/0001_jarvis_init.sql` → **Run**.
-3. **Authentication → Sign In / Providers → Anonymous sign-ins: ON**. La app crea un usuario anónimo con JWT; RLS aísla tus datos.
-4. **Project Settings → API**: copiá la **Project URL** y la **anon public key** → pegalas en Ajustes de la app.
-5. Reiniciá la app. Cada 5 minutos se sincronizan tareas, decisiones, memorias (con embeddings) y resúmenes.
+La memoria y la búsqueda semántica funcionan en el teléfono. Firebase solo guarda una copia.
 
-> Nunca pongas la `service_role` key en la app.
+**Ya está configurado**: proyecto `jarvis-svb` (plan Spark, gratis), app Android `com.vincularbusiness.jarvis_svb`,
+Authentication con proveedor **Anónimo** y Cloud Firestore en `southamerica-east1` (São Paulo).
+
+- Para usarlo: **Ajustes → Respaldo en la nube → Respaldar en Firebase**. No hay que pegar ninguna clave.
+- Qué sube: texto anonimizado, decisiones, tareas, memorias (con embedding) y resúmenes, bajo `users/{uid}/...`. Nunca audio.
+- **Borrar mi copia en la nube** elimina todo lo que subió ese teléfono.
+- Las reglas viven en `firestore.rules`. Si las cambiás: `firebase deploy --only firestore:rules` (o pegalas en la consola → Firestore → Reglas).
+- La configuración de `lib/firebase_options.dart` identifica al proyecto y no es secreta; la seguridad la dan las reglas.
+
+> El usuario es anónimo: si desinstalás la app, la copia en la nube queda huérfana (no se puede recuperar desde otro teléfono).
+> Para restaurar entre dispositivos hay que sumar inicio de sesión con Google (pendiente en el roadmap).
+> Nunca pongas una clave de cuenta de servicio de Firebase en la app ni en el repo.
 
 ---
 

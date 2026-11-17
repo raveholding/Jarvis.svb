@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../data/local/local_database.dart';
 import '../../data/local/settings_store.dart';
 import '../../data/remote/llm_router.dart';
-import '../../data/remote/supabase_sync.dart';
+import '../../data/remote/firebase_sync.dart';
 import '../../data/repositories/memory_repository_impl.dart';
 import '../../domain/entities/app_settings.dart';
 import '../../domain/entities/daily_summary.dart';
@@ -51,14 +51,13 @@ final settingsProvider = NotifierProvider<SettingsController, AppSettings>(Setti
 
 final llmProvider = Provider<LlmRepository>((ref) => LlmRouter(settings: () => ref.read(settingsProvider)));
 
-final supabaseSyncProvider = Provider<SupabaseSync>((ref) => SupabaseSync(
+final cloudSyncProvider = Provider<FirebaseSync>((ref) => FirebaseSync(
       db: ref.read(localDatabaseProvider),
-      llm: ref.read(llmProvider),
       settings: () => ref.read(settingsProvider),
     ));
 
 final memoryRepositoryProvider = Provider<MemoryRepository>(
-  (ref) => MemoryRepositoryImpl(ref.read(localDatabaseProvider), ref.read(supabaseSyncProvider)),
+  (ref) => MemoryRepositoryImpl(ref.read(localDatabaseProvider), ref.read(llmProvider)),
 );
 
 // ---------------- Servicios ----------------
@@ -84,7 +83,7 @@ final notificationServiceProvider = Provider<NotificationService>((_) => Notific
 final integrationsProvider = Provider<IntegrationsService>((ref) => IntegrationsService(
       db: ref.read(localDatabaseProvider),
       settings: () => ref.read(settingsProvider),
-      supabase: ref.read(supabaseSyncProvider),
+      cloud: ref.read(cloudSyncProvider),
     ));
 
 // ---------------- Lecturas para la UI ----------------

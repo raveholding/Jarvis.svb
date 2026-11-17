@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jarvis_svb/core/utils/json_utils.dart';
 import 'package:jarvis_svb/core/utils/pii_redactor.dart';
+import 'package:jarvis_svb/core/utils/vector_math.dart';
+import 'package:jarvis_svb/data/remote/firebase_sync.dart';
 import 'package:jarvis_svb/core/utils/wav_encoder.dart';
 import 'package:jarvis_svb/domain/entities/agent_decision.dart';
 import 'package:jarvis_svb/domain/entities/app_settings.dart';
@@ -91,5 +93,49 @@ void main() {
       final out = policy.apply(d(), ctx: ContextSnapshot(now: DateTime(2026, 1, 1, 12, 5)), settings: const AppSettings(), recent: [first]);
       expect(out.delivery, Delivery.none);
     });
+  });
+
+  group('VectorMath', () {
+    test('encode/decode conserva el vector (float32)', () {
+      final v = [0.5, -0.25, 1.0, 0.0];
+      final bytes = VectorMath.encode(v);
+      expect(bytes.length, 16);
+      expect(VectorMath.decode(bytes), v);
+    });
+
+    test('coseno: iguales = 1, ortogonales = 0, tamaños distintos = 0', () {
+      expect(VectorMath.cosine([1, 2, 3], [2, 4, 6]), closeTo(1, 1e-9));
+      expect(VectorMath.cosine([1, 0], [0, 1]), 0);
+      expect(VectorMath.cosine([1, 0], [1, 0, 0]), 0);
+      expect(VectorMath.cosine([0, 0], [1, 0]), 0);
+    });
+
+    test('topK ordena por similitud y descarta lo que no llega al umbral', () {
+      EmbeddedMemory m(String c, List<double> v) =>
+          EmbeddedMemory(content: c, importance: 0.5, vector: Float32List.fromList(v));
+      final hits = VectorMath.topK(
+        [1, 0],
+        [m('lejos', [0, 1]), m('cerca', [0.9, 0.1]), m('igual', [1, 0]), m('opuesto', [-1, 0])],
+        k: 2,
+      );
+      expect(hits, ['igual', 'cerca']);
+    });
+  });
+
+  test('firestoreSafe convierte listas anidadas en texto JSON', () {
+    final out = FirebaseSync.firestoreSafe({
+      'a': [1, [2, 3], {'b': [4]}],
+      'c': 'x',
+    }) as Map;
+    expect(out['a'], [1, '[2,3]', {'b': [4]}]);
+    expect(out['c'], 'x');
+  });
+
+  test('AppSettings: el respaldo en la nube está apagado por defecto y respeta el modo privado', () {
+    expect(const AppSettings().hasCloudBackup, isFalse);
+    expect(const AppSettings(cloudBackupEnabled: true).hasCloudBackup, isTrue);
+    expect(const AppSettings(cloudBackupEnabled: true, cloudEnabled: false).hasCloudBackup, isFalse);
+    final round = AppSettings.fromJson(const AppSettings(cloudBackupEnabled: true).toJson());
+    expect(round.cloudBackupEnabled, isTrue);
   });
 }
