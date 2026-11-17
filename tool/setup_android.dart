@@ -87,6 +87,16 @@ void _patchGradle() {
   g = g.replaceAll(RegExp(r'minSdk\s*=\s*flutter\.minSdkVersion'), 'minSdk = 26');
   g = g.replaceAll(RegExp(r'minSdkVersion\s+flutter\.minSdkVersion'), 'minSdkVersion 26');
 
+  // Lint "vital" de release falla dentro de plugins de terceros (bug conocido de AGP).
+  if (!g.contains('checkReleaseBuilds')) {
+    g = g.replaceFirst(
+      RegExp(r'android\s*\{'),
+      isKts
+          ? 'android {\n    lint {\n        checkReleaseBuilds = false\n        abortOnError = false\n    }'
+          : 'android {\n    lint {\n        checkReleaseBuilds false\n        abortOnError false\n    }',
+    );
+  }
+
   // Core library desugaring (requerido por flutter_local_notifications).
   if (!g.contains('CoreLibraryDesugaringEnabled')) {
     g = g.replaceFirst(
