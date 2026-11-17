@@ -37,6 +37,12 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Aceptar licencias del SDK de Android (NDK para whisper.cpp)
+        run: |
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          yes | "$SDKM" "ndk;29.0.13113456" > /dev/null || true
+
       - name: Preparar logs
         run: mkdir -p logs && flutter --version | tee logs/flutter_version.txt
 
