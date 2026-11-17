@@ -99,6 +99,13 @@ Para generar el APK: `flutter build apk --release --target-platform android-arm6
 
 ---
 
+## Firma del APK
+
+Los APK se firman con `android/app/dev-signing.jks`, una clave de **desarrollo** incluida en el repo para que cada versión nueva se instale encima de la anterior sin perder datos.
+Como el repo es público, **antes de publicar en Play Store** generá una clave privada (`keytool -genkey ...`), guardala fuera del repo y configurala en `android/key.properties`.
+
+---
+
 ## Problemas comunes
 
 | Síntoma | Solución |

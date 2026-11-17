@@ -34,11 +34,23 @@ android {
         versionName = flutter.versionName
     }
 
+    // Firma de DESARROLLO fija: permite actualizar el APK sin desinstalar.
+    // Antes de publicar en Play Store, creá una clave privada (ver docs/DESPLIEGUE.md).
+    signingConfigs {
+        create("dev") {
+            storeFile = file("dev-signing.jks")
+            storePassword = "jarvis-dev"
+            keyAlias = "jarvis"
+            keyPassword = "jarvis-dev"
+        }
+    }
+
     buildTypes {
+        getByName("debug") {
+            signingConfig = signingConfigs.getByName("dev")
+        }
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("dev")
         }
     }
 }
